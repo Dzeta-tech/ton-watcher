@@ -11,6 +11,7 @@ public static class JobScheduler
     {
         ScheduleLatestTransactionsFetch(config, logger);
         ScheduleMissingTransactionsFix(logger);
+        ScheduleWebhookNotifications(logger);
 
         logger.LogInformation("All recurring jobs have been scheduled");
     }
@@ -35,5 +36,15 @@ public static class JobScheduler
             "*/10 * * * *"); // Every 10 minutes
 
         logger.LogInformation("Scheduled 'fix-missing-transactions' job every 10 minutes");
+    }
+
+    static void ScheduleWebhookNotifications(ILogger logger)
+    {
+        RecurringJob.AddOrUpdate<INotificationService>(
+            "send-webhook-notifications",
+            service => service.SendPendingNotificationsAsync(CancellationToken.None),
+            "*/10 * * * * *"); // Every 10 seconds
+
+        logger.LogInformation("Scheduled 'send-webhook-notifications' job every 10 seconds");
     }
 }

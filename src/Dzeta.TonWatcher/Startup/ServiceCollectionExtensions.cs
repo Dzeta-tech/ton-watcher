@@ -37,6 +37,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<LatestTransactionFetcher>();
         services.AddScoped<MissingTransactionFetcher>();
         services.AddScoped<TransactionFetcherService>();
+        services.AddScoped<INotificationService, WebhookNotificationService>();
 
         // Background jobs
         services.AddHangfireServices();
