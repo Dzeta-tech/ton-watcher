@@ -11,14 +11,14 @@ public static class JobScheduler
     {
         ScheduleLatestTransactionsFetch(config, logger);
         ScheduleMissingTransactionsFix(logger);
-        
+
         logger.LogInformation("All recurring jobs have been scheduled");
     }
 
-    private static void ScheduleLatestTransactionsFetch(TonWatcherConfiguration config, ILogger logger)
+    static void ScheduleLatestTransactionsFetch(TonWatcherConfiguration config, ILogger logger)
     {
-        var pollingCron = $"*/{config.PollingIntervalSeconds} * * * * *";
-        
+        string? pollingCron = $"*/{config.PollingIntervalSeconds} * * * * *";
+
         RecurringJob.AddOrUpdate<TransactionFetcherService>(
             "fetch-latest-transactions",
             service => service.FetchLatestTransactionsAsync(CancellationToken.None),
@@ -27,7 +27,7 @@ public static class JobScheduler
         logger.LogInformation("Scheduled 'fetch-latest-transactions' job with cron: {Cron}", pollingCron);
     }
 
-    private static void ScheduleMissingTransactionsFix(ILogger logger)
+    static void ScheduleMissingTransactionsFix(ILogger logger)
     {
         RecurringJob.AddOrUpdate<TransactionFetcherService>(
             "fix-missing-transactions",
@@ -36,4 +36,4 @@ public static class JobScheduler
 
         logger.LogInformation("Scheduled 'fix-missing-transactions' job every 10 minutes");
     }
-} 
+}

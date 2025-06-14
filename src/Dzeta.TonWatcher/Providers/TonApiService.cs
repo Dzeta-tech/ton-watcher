@@ -1,4 +1,3 @@
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.RateLimiting;
 using Dzeta.TonWatcher.Generated;
@@ -17,6 +16,11 @@ public class TonApiService(TonApiClient tonApiClient, ILogger<TonApiService> log
         QueueLimit = 0,
         Window = TimeSpan.FromSeconds(1)
     });
+
+    public void Dispose()
+    {
+        rateLimiter.Dispose();
+    }
 
     /// <summary>
     ///     Gets all transactions for account after specific LT with beforeLt limit
@@ -91,10 +95,5 @@ public class TonApiService(TonApiClient tonApiClient, ILogger<TonApiService> log
                 if (currentAfterLt >= beforeLt) hasMore = false;
             }
         }
-    }
-
-    public void Dispose()
-    {
-        rateLimiter.Dispose();
     }
 }

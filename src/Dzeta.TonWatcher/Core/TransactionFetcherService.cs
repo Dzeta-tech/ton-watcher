@@ -7,28 +7,13 @@ namespace Dzeta.TonWatcher.Core;
 /// <summary>
 ///     Orchestrates transaction fetching operations
 /// </summary>
-public class TransactionFetcherService
+public class TransactionFetcherService(
+    LatestTransactionFetcher latestFetcher,
+    MissingTransactionFetcher missingFetcher,
+    ITransactionRepository repository,
+    TonWatcherConfiguration config,
+    ILogger<TransactionFetcherService> logger)
 {
-    private readonly LatestTransactionFetcher _latestFetcher;
-    private readonly MissingTransactionFetcher _missingFetcher;
-    private readonly ITransactionRepository _repository;
-    private readonly TonWatcherConfiguration _config;
-    private readonly ILogger<TransactionFetcherService> _logger;
-
-    public TransactionFetcherService(
-        LatestTransactionFetcher latestFetcher,
-        MissingTransactionFetcher missingFetcher,
-        ITransactionRepository repository,
-        TonWatcherConfiguration config,
-        ILogger<TransactionFetcherService> logger)
-    {
-        _latestFetcher = latestFetcher;
-        _missingFetcher = missingFetcher;
-        _repository = repository;
-        _config = config;
-        _logger = logger;
-    }
-
     /// <summary>
     ///     Fetches latest transactions starting from the max LT in database
     /// </summary>
@@ -38,11 +23,12 @@ public class TransactionFetcherService
     {
         try
         {
-            return await _latestFetcher.FetchAsync(cancellationToken);
+            return await latestFetcher.FetchAsync(cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching latest transactions for wallet {WalletAddress}", _config.WalletAddress);
+            logger.LogError(ex, "Error fetching latest transactions for wallet {WalletAddress}",
+                config.WalletAddress);
             throw;
         }
     }
@@ -54,15 +40,17 @@ public class TransactionFetcherService
     /// <param name="beforeLt">End LT to avoid race conditions with latest fetch</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Number of transactions processed</returns>
-    public async Task<int> FetchMissingTransactionsAsync(long afterLt, long beforeLt, CancellationToken cancellationToken = default)
+    public async Task<int> FetchMissingTransactionsAsync(long afterLt, long beforeLt,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            return await _missingFetcher.FetchAsync(afterLt, beforeLt, cancellationToken);
+            return await missingFetcher.FetchAsync(afterLt, beforeLt, cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching missing transactions for wallet {WalletAddress}", _config.WalletAddress);
+            logger.LogError(ex, "Error fetching missing transactions for wallet {WalletAddress}",
+                config.WalletAddress);
             throw;
         }
     }
@@ -76,11 +64,11 @@ public class TransactionFetcherService
     {
         try
         {
-            var currentMaxLt = await _repository.GetMaxLtAsync(_config.WalletAddress, cancellationToken);
+            long currentMaxLt = await repository.GetMaxLtAsync(config.WalletAddress, cancellationToken);
 
             if (currentMaxLt <= 0)
             {
-                _logger.LogInformation("No transactions in database yet, skipping missing transaction fix");
+                logger.LogInformation("No transactions in database yet, skipping missing transaction fix");
                 return 0;
             }
 
@@ -88,7 +76,8 @@ public class TransactionFetcherService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during missing transaction fix for wallet {WalletAddress}", _config.WalletAddress);
+            logger.LogError(ex, "Error during missing transaction fix for wallet {WalletAddress}",
+                config.WalletAddress);
             throw;
         }
     }

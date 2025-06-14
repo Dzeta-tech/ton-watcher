@@ -15,14 +15,14 @@ internal class Program
 
         try
         {
-            var builder = Host.CreateApplicationBuilder(args);
-            
+            HostApplicationBuilder? builder = Host.CreateApplicationBuilder(args);
+
             builder.Services.AddTonWatcher();
             builder.Services.AddSerilog();
 
-            var host = builder.Build();
-            var logger = host.Services.GetRequiredService<ILogger<Program>>();
-            var config = host.Services.GetRequiredService<TonWatcherConfiguration>();
+            IHost? host = builder.Build();
+            ILogger<Program>? logger = host.Services.GetRequiredService<ILogger<Program>>();
+            TonWatcherConfiguration? config = host.Services.GetRequiredService<TonWatcherConfiguration>();
 
             LogStartupInfo(logger, config);
             JobScheduler.ScheduleJobs(config, logger);
@@ -40,7 +40,7 @@ internal class Program
         }
     }
 
-    private static void LogStartupInfo(ILogger<Program> logger, TonWatcherConfiguration config)
+    static void LogStartupInfo(ILogger<Program> logger, TonWatcherConfiguration config)
     {
         logger.LogInformation("Starting Dzeta.TonWatcher...");
         logger.LogInformation("Watching wallet: {WalletAddress}", config.WalletAddress);

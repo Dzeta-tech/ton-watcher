@@ -25,4 +25,4 @@ public static class TransactionMapper
         dbTransaction.Utime = apiTransaction.Utime;
         dbTransaction.TransactionData = apiTransaction;
     }
-} 
+}

@@ -5,75 +5,75 @@ using Dzeta.Configuration;
 namespace Dzeta.TonWatcher.Config;
 
 /// <summary>
-///     Конфигурация для TON Watcher микросервиса.
-///     Все параметры задаются через ENV переменные с префиксом TONWATCHER_.
+///     Configuration for TON Watcher microservice.
+///     All parameters are set via ENV variables with TONWATCHER_ prefix.
 /// </summary>
 public class TonWatcherConfiguration : BaseConfiguration
 {
     /// <summary>
-    ///     Адрес TON кошелька для отслеживания входящих транзакций.
+    ///     TON wallet address to track incoming transactions.
     ///     ENV: TONWATCHER_WALLET_ADDRESS
-    ///     Пример: "0:0fc009519c62c9262c9030bee05b5c805cb8f32ce3b8499791e0f82678075261"
+    ///     Example: "0:0fc009519c62c9262c9030bee05b5c805cb8f32ce3b8499791e0f82678075261"
     /// </summary>
     [Required]
     public string WalletAddress { get; set; } = string.Empty;
 
     /// <summary>
-    ///     URL для отправки webhook'ов при получении новых транзакций.
+    ///     URL for sending webhooks when new transactions are received.
     ///     ENV: TONWATCHER_WEBHOOK_URL
-    ///     Пример: "https://api.mysite.com/webhooks/ton-payment"
+    ///     Example: "https://api.mysite.com/webhooks/ton-payment"
     /// </summary>
     [Required]
     public string WebhookUrl { get; set; } = string.Empty;
 
     /// <summary>
-    ///     Токен для авторизации webhook'ов (опционально).
-    ///     Будет передаваться в заголовке Authorization: Bearer {token}
+    ///     Token for webhook authorization (optional).
+    ///     Will be passed in Authorization: Bearer {token} header
     ///     ENV: TONWATCHER_WEBHOOK_TOKEN
     /// </summary>
     public string? WebhookToken { get; set; }
 
     /// <summary>
-    ///     Интервал проверки новых транзакций в секундах.
+    ///     Interval for checking new transactions in seconds.
     ///     ENV: TONWATCHER_POLLING_INTERVAL_SECONDS
-    ///     По умолчанию: 30 секунд
+    ///     Default: 30 seconds
     /// </summary>
     [DefaultValue(30)]
     public int PollingIntervalSeconds { get; set; }
 
     /// <summary>
-    ///     URL TON API провайдера.
+    ///     TON API provider URL.
     ///     ENV: TONWATCHER_TON_API_URL
-    ///     По умолчанию: https://tonapi.io
+    ///     Default: https://tonapi.io
     /// </summary>
     [DefaultValue("https://tonapi.io")]
     public string TonApiUrl { get; set; } = "https://tonapi.io";
 
     /// <summary>
-    ///     API ключ для TON API (если требуется).
+    ///     API key for TON API (if required).
     ///     ENV: TONWATCHER_TON_API_KEY
     /// </summary>
     public string? TonApiKey { get; set; }
 
     /// <summary>
-    ///     Максимальное количество попыток отправки webhook'а.
+    ///     Maximum number of webhook delivery attempts.
     ///     ENV: TONWATCHER_WEBHOOK_MAX_RETRIES
-    ///     По умолчанию: 3
+    ///     Default: 3
     /// </summary>
     [DefaultValue(3)]
     public int WebhookMaxRetries { get; set; }
 
     /// <summary>
-    ///     Таймаут HTTP запросов в секундах.
+    ///     HTTP request timeout in seconds.
     ///     ENV: TONWATCHER_HTTP_TIMEOUT_SECONDS
-    ///     По умолчанию: 30 секунд
+    ///     Default: 30 seconds
     /// </summary>
     [DefaultValue(30)]
     public int HttpTimeoutSeconds { get; set; }
 
     /// <summary>
-    ///     Конфигурация подключения к базе данных PostgreSQL.
-    ///     ENV переменные: TONWATCHER_DATABASE_*
+    ///     PostgreSQL database connection configuration.
+    ///     ENV variables: TONWATCHER_DATABASE_*
     /// </summary>
     [Required]
     public DatabaseConnectionConfiguration Database { get; set; } = new();

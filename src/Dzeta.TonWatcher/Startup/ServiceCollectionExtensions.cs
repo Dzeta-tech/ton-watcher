@@ -4,6 +4,7 @@ using Dzeta.TonWatcher.Core;
 using Dzeta.TonWatcher.Core.Services;
 using Dzeta.TonWatcher.Generated;
 using Dzeta.TonWatcher.Infrastructure;
+using Dzeta.TonWatcher.Infrastructure.Repositories;
 using Dzeta.TonWatcher.Providers;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
@@ -22,7 +23,7 @@ public static class ServiceCollectionExtensions
         // Database
         services.AddDbContext<TonWatcherDbContext>((serviceProvider, options) =>
         {
-            var config = serviceProvider.GetRequiredService<TonWatcherConfiguration>();
+            TonWatcherConfiguration? config = serviceProvider.GetRequiredService<TonWatcherConfiguration>();
             options.UseNpgsql(config.Database.ConnectionString);
         });
 
@@ -32,7 +33,7 @@ public static class ServiceCollectionExtensions
 
         // Application services
         services.AddSingleton<TonApiService>();
-        services.AddScoped<ITransactionRepository, Infrastructure.Repositories.TransactionRepository>();
+        services.AddScoped<ITransactionRepository, TransactionRepository>();
         services.AddScoped<LatestTransactionFetcher>();
         services.AddScoped<MissingTransactionFetcher>();
         services.AddScoped<TransactionFetcherService>();
@@ -43,14 +44,14 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    private static IServiceCollection AddTonApiClient(this IServiceCollection services)
+    static IServiceCollection AddTonApiClient(this IServiceCollection services)
     {
         services.AddSingleton<TonApiClient>(serviceProvider =>
         {
-            var config = serviceProvider.GetRequiredService<TonWatcherConfiguration>();
-            var httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
-            var httpClient = httpClientFactory.CreateClient();
-            
+            TonWatcherConfiguration config = serviceProvider.GetRequiredService<TonWatcherConfiguration>();
+            IHttpClientFactory httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
+            HttpClient httpClient = httpClientFactory.CreateClient();
+
             httpClient.BaseAddress = new Uri(config.TonApiUrl);
             httpClient.Timeout = TimeSpan.FromSeconds(config.HttpTimeoutSeconds);
 
@@ -63,7 +64,7 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    private static IServiceCollection AddHangfireServices(this IServiceCollection services)
+    static IServiceCollection AddHangfireServices(this IServiceCollection services)
     {
         services.AddHangfire(configuration => configuration
             .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
@@ -71,11 +72,8 @@ public static class ServiceCollectionExtensions
             .UseRecommendedSerializerSettings()
             .UseInMemoryStorage());
 
-        services.AddHangfireServer(options =>
-        {
-            options.WorkerCount = 1;
-        });
+        services.AddHangfireServer(options => { options.WorkerCount = 1; });
 
         return services;
     }
-} 
+}

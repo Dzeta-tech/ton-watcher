@@ -1,83 +1,69 @@
 using Dzeta.TonWatcher.Config;
-using Dzeta.TonWatcher.Generated;
+using Dzeta.TonWatcher.Infrastructure.Entities;
 using Dzeta.TonWatcher.Providers;
 using Microsoft.Extensions.Logging;
 
 namespace Dzeta.TonWatcher.Core.Services;
 
-public class MissingTransactionFetcher
+public class MissingTransactionFetcher(
+    TonApiService tonApiService,
+    ITransactionRepository repository,
+    TonWatcherConfiguration config,
+    ILogger<MissingTransactionFetcher> logger,
+    ILoggerFactory loggerFactory)
 {
-    private readonly TonApiService _tonApiService;
-    private readonly ITransactionRepository _repository;
-    private readonly TonWatcherConfiguration _config;
-    private readonly ILogger<MissingTransactionFetcher> _logger;
-    private readonly ILoggerFactory _loggerFactory;
-
-    public MissingTransactionFetcher(
-        TonApiService tonApiService,
-        ITransactionRepository repository,
-        TonWatcherConfiguration config,
-        ILogger<MissingTransactionFetcher> logger,
-        ILoggerFactory loggerFactory)
-    {
-        _tonApiService = tonApiService;
-        _repository = repository;
-        _config = config;
-        _logger = logger;
-        _loggerFactory = loggerFactory;
-    }
-
     public async Task<int> FetchAsync(long afterLt, long beforeLt, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation(
+        logger.LogInformation(
             "Starting missing transaction fetch from LT {AfterLt} to {BeforeLt} for wallet {WalletAddress}",
-            afterLt, beforeLt, _config.WalletAddress);
+            afterLt, beforeLt, config.WalletAddress);
 
-        var processor = new BatchProcessor(_repository, _loggerFactory.CreateLogger<BatchProcessor>());
-        var newTransactionCount = 0;
-        var updatedTransactionCount = 0;
+        BatchProcessor processor = new(repository, loggerFactory.CreateLogger<BatchProcessor>());
+        int newTransactionCount = 0;
+        int updatedTransactionCount = 0;
 
-        await foreach (var apiTransaction in _tonApiService.GetTransactionsAfterLtAsync(
-                           _config.WalletAddress, afterLt, beforeLt, cancellationToken: cancellationToken))
+        await foreach (Generated.Transaction apiTransaction in tonApiService.GetTransactionsAfterLtAsync(
+                           config.WalletAddress, afterLt, beforeLt, cancellationToken: cancellationToken))
         {
-            var existingTransaction = await _repository.GetByHashAsync(apiTransaction.Hash, cancellationToken);
+            Transaction? existingTransaction = await repository.GetByHashAsync(apiTransaction.Hash, cancellationToken);
 
             if (existingTransaction != null)
             {
                 if (ShouldUpdateTransaction(existingTransaction, apiTransaction))
                 {
                     TransactionMapper.UpdateDbTransaction(existingTransaction, apiTransaction);
-                    await _repository.UpdateAsync(existingTransaction, cancellationToken);
+                    await repository.UpdateAsync(existingTransaction, cancellationToken);
                     await processor.ProcessItemAsync(cancellationToken);
-                    
+
                     updatedTransactionCount++;
-                    _logger.LogDebug("Updated transaction {Hash} from unsuccessful to successful", apiTransaction.Hash);
+                    logger.LogDebug("Updated transaction {Hash} from unsuccessful to successful", apiTransaction.Hash);
                 }
                 else
                 {
-                    _logger.LogDebug("Transaction {Hash} already exists and no update needed", apiTransaction.Hash);
+                    logger.LogDebug("Transaction {Hash} already exists and no update needed", apiTransaction.Hash);
                 }
+
                 continue;
             }
 
-            var dbTransaction = TransactionMapper.ToDbTransaction(apiTransaction, _config.WalletAddress);
-            await _repository.AddAsync(dbTransaction, cancellationToken);
+            Transaction dbTransaction = TransactionMapper.ToDbTransaction(apiTransaction, config.WalletAddress);
+            await repository.AddAsync(dbTransaction, cancellationToken);
             await processor.ProcessItemAsync(cancellationToken);
-            
+
             newTransactionCount++;
         }
 
         await processor.FinalizeAsync(cancellationToken);
 
-        _logger.LogInformation(
+        logger.LogInformation(
             "Processed {NewCount} new and {UpdatedCount} updated transactions for wallet {WalletAddress}",
-            newTransactionCount, updatedTransactionCount, _config.WalletAddress);
+            newTransactionCount, updatedTransactionCount, config.WalletAddress);
 
         return newTransactionCount + updatedTransactionCount;
     }
 
-    private static bool ShouldUpdateTransaction(Infrastructure.Entities.Transaction existingTransaction, Transaction apiTransaction)
+    static bool ShouldUpdateTransaction(Transaction existingTransaction, Generated.Transaction apiTransaction)
     {
         return !existingTransaction.Success && apiTransaction.Success;
     }
-} 
+}
