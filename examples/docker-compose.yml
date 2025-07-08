@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: tonwatcher
+      POSTGRES_USER: tonwatcher
+      POSTGRES_PASSWORD: tonwatcher123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tonwatcher"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  webhook-listener:
+    build:
+      context: ./webhook-listener
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+    restart: unless-stopped
+
+  ton-watcher:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      webhook-listener:
+        condition: service_started
+    environment:
+      # Database configuration
+      - TONWATCHER_DATABASE_HOST=postgres
+      - TONWATCHER_DATABASE_PORT=5432
+      - TONWATCHER_DATABASE_DATABASE=tonwatcher
+      - TONWATCHER_DATABASE_USERNAME=tonwatcher
+      - TONWATCHER_DATABASE_PASSWORD=tonwatcher123
+      
+      # TON Wallet to monitor (example wallet - replace with real one)
+      - TONWATCHER_WALLET_ADDRESS=0:6f3aab06db6b19504c9c0eaee61346ad860fd476b529c041ece7416cc9b15b57
+      
+      # Webhook configuration
+      - TONWATCHER_WEBHOOK_URL=http://webhook-listener:8080/webhook
+      - TONWATCHER_WEBHOOK_TOKEN=test-token-123
+      - TONWATCHER_WEBHOOK_MAX_RETRIES=3
+      
+      # Polling configuration
+      - TONWATCHER_POLLING_INTERVAL_SECONDS=30
+      
+      # TON API configuration
+      - TONWATCHER_TON_API_URL=https://tonapi.io
+      - TONWATCHER_HTTP_TIMEOUT_SECONDS=30
+    restart: unless-stopped
+
+volumes:
+  postgres_data: 

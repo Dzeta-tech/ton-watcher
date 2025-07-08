@@ -1,5 +1,8 @@
 ﻿using Dzeta.TonWatcher.Config;
+using Dzeta.TonWatcher.Infrastructure;
 using Dzeta.TonWatcher.Startup;
+using Hangfire;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -25,7 +28,13 @@ internal class Program
             TonWatcherConfiguration? config = host.Services.GetRequiredService<TonWatcherConfiguration>();
 
             LogStartupInfo(logger, config);
-            JobScheduler.ScheduleJobs(config, logger);
+            
+            // Ensure database is created
+            await EnsureDatabaseCreated(host, logger);
+            
+            // Schedule jobs AFTER host is built so Hangfire services are initialized
+            IRecurringJobManager recurringJobManager = host.Services.GetRequiredService<IRecurringJobManager>();
+            JobScheduler.ScheduleJobs(config, logger, recurringJobManager);
 
             await host.RunAsync();
         }
@@ -38,6 +47,16 @@ internal class Program
         {
             await Log.CloseAndFlushAsync();
         }
+    }
+
+    static async Task EnsureDatabaseCreated(IHost host, Microsoft.Extensions.Logging.ILogger logger)
+    {
+        using IServiceScope scope = host.Services.CreateScope();
+        TonWatcherDbContext dbContext = scope.ServiceProvider.GetRequiredService<TonWatcherDbContext>();
+        
+        logger.LogInformation("Ensuring database is created...");
+        await dbContext.Database.EnsureCreatedAsync();
+        logger.LogInformation("Database is ready");
     }
 
     static void LogStartupInfo(ILogger<Program> logger, TonWatcherConfiguration config)
