@@ -59,7 +59,11 @@ public static class ServiceCollectionExtensions
             if (!string.IsNullOrEmpty(config.TonApiKey))
                 httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {config.TonApiKey}");
 
-            return new TonApiClient(httpClient);
+            TonApiClient tonApiClient = new TonApiClient(httpClient);
+            if (!string.IsNullOrEmpty(config.TonApiUrl))
+                tonApiClient.BaseUrl = config.TonApiUrl;
+            
+            return tonApiClient;
         });
 
         return services;

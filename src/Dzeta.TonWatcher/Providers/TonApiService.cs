@@ -33,13 +33,13 @@ public class TonApiService(TonApiClient tonApiClient, ILogger<TonApiService> log
     /// <returns>Async enumerable of transactions</returns>
     public async IAsyncEnumerable<Transaction> GetTransactionsAfterLtAsync(
         string accountAddress,
-        long afterLt,
-        long beforeLt,
+        long? afterLt,
+        long? beforeLt,
         int limit = 250,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         bool hasMore = true;
-        long currentAfterLt = afterLt;
+        long currentAfterLt = afterLt ?? 0;
 
         while (hasMore && !cancellationToken.IsCancellationRequested)
         {

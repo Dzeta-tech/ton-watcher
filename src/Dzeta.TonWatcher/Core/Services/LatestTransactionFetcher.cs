@@ -23,7 +23,7 @@ public class LatestTransactionFetcher(
         int newTransactionCount = 0;
 
         await foreach (Transaction apiTransaction in tonApiService.GetTransactionsAfterLtAsync(
-                           config.WalletAddress, maxLt, 0, cancellationToken: cancellationToken))
+                           config.WalletAddress, maxLt, null, cancellationToken: cancellationToken))
         {
             Infrastructure.Entities.Transaction? existingTransaction =
                 await repository.GetByHashAsync(apiTransaction.Hash, cancellationToken);
